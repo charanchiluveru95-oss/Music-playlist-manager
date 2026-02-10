@@ -1,2 +1,272 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+#include <stdio.h>
+#include <string.h>
+
+#define MAX_SONGS 100
+#define MAX_TITLE 50
+#define MAX_ARTIST 50
+
+// Song structure
+typedef struct {
+    char title[MAX_TITLE];
+    char artist[MAX_ARTIST];
+    int duration; // in seconds
+} Song;
+
+Song playlist[MAX_SONGS];
+int songCount = 0;
+int currentSong = -1;    // Tracking song position
+int isPlaying = 0;       // Play state
+
+// Helper to flush the rest of the current input line
+void clear_input_buffer() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF) { }
+}
+
+// Preload some songs like a music app
+void loadDefaultSongs() {
+
+    strcpy(playlist[0].title, "Shape of You");
+    strcpy(playlist[0].artist, "Ed Sheeran");
+    playlist[0].duration = 233;
+
+    strcpy(playlist[1].title, "Blinding Lights");
+    strcpy(playlist[1].artist, "The Weeknd");
+    playlist[1].duration = 200;
+
+    strcpy(playlist[2].title, "Closer");
+    strcpy(playlist[2].artist, "Chainsmokers");
+    playlist[2].duration = 244;
+
+    strcpy(playlist[3].title, "Faded");
+    strcpy(playlist[3].artist, "Alan Walker");
+    playlist[3].duration = 212;
+
+    strcpy(playlist[4].title, "Believer");
+    strcpy(playlist[4].artist, "Imagine Dragons");
+    playlist[4].duration = 204;
+
+    songCount = 5;
+    currentSong = 0;
+
+    printf("Default songs loaded successfully!\n");
+}
+
+
+// ? Main play function
+void playSong() {
+    if (currentSong == -1 || songCount == 0) {
+        printf("No song selected to play!\n");
+        return;
+    }
+    isPlaying = 1;
+    printf("\nPlaying: %s by %s [%d sec]\n",
+           playlist[currentSong].title,
+           playlist[currentSong].artist,
+           playlist[currentSong].duration);
+}
+
+void pauseSong() {
+    if (!isPlaying) {
+        printf("No song is currently playing!\n");
+        return;
+    }
+    isPlaying = 0;
+    printf("\nPaused: %s\n", playlist[currentSong].title);
+}
+
+// Function to add a song
+void addSong() {
+    if (songCount >= MAX_SONGS) {
+        printf("Playlist full!\n");
+        return;
+    }
+
+    // read title and artist using fgets (line-based)
+    printf("Enter song title: ");
+    if (!fgets(playlist[songCount].title, MAX_TITLE, stdin)) return;
+    playlist[songCount].title[strcspn(playlist[songCount].title, "\n")] = 0;
+
+    printf("Enter artist name: ");
+    if (!fgets(playlist[songCount].artist, MAX_ARTIST, stdin)) return;
+    playlist[songCount].artist[strcspn(playlist[songCount].artist, "\n")] = 0;
+
+    printf("Enter duration (in seconds): ");
+    char durStr[32];
+    if (!fgets(durStr, sizeof(durStr), stdin)) return;
+    if (sscanf(durStr, "%d", &playlist[songCount].duration) != 1) {
+        printf("Invalid duration entered. Song not added.\n");
+        return;
+    }
+
+    songCount++;
+
+    if (currentSong == -1)   // set current song to first
+        currentSong = 0;
+
+    printf("Song added successfully!\n");
+}
+
+// Function to delete a song
+void deleteSong() {
+    if (songCount == 0) {
+        printf("Playlist is empty!\n");
+        return;
+    }
+
+    char title[MAX_TITLE];
+    printf("Enter song title to delete: ");
+    if (!fgets(title, MAX_TITLE, stdin)) return;
+    title[strcspn(title, "\n")] = 0;
+
+    for (int i = 0; i < songCount; i++) {
+        if (strcmp(playlist[i].title, title) == 0) {
+
+            for (int j = i; j < songCount - 1; j++) {
+                playlist[j] = playlist[j + 1];
+            }
+
+            songCount--;
+            if (songCount == 0)
+                currentSong = -1;
+            else if (currentSong >= songCount)
+                currentSong = songCount - 1;
+
+            printf("Song deleted successfully!\n");
+            return;
+        }
+    }
+    printf("Song not found!\n");
+}
+
+// Function to display all songs
+void displaySongs() {
+    if (songCount == 0) {
+        printf("Playlist is empty!\n");
+        return;
+    }
+
+    printf("\n--- Playlist ---\n");
+    for (int i = 0; i < songCount; i++) {
+        printf("%d. %s by %s [%d sec]\n",
+               i + 1,
+               playlist[i].title,
+               playlist[i].artist,
+               playlist[i].duration);
+    }
+    printf("\n");
+}
+
+// Function to search a song
+void searchSong() {
+    if (songCount == 0) {
+        printf("Playlist is empty!\n");
+        return;
+    }
+
+    char title[MAX_TITLE];
+    printf("Enter song title to search: ");
+    if (!fgets(title, MAX_TITLE, stdin)) return;
+    title[strcspn(title, "\n")] = 0;
+
+    for (int i = 0; i < songCount; i++) {
+        if (strcmp(playlist[i].title, title) == 0) {
+            printf("Found: %s by %s [%d sec]\n",
+                   playlist[i].title,
+                   playlist[i].artist,
+                   playlist[i].duration);
+
+            currentSong = i;
+            return;
+        }
+    }
+    printf("Song not found!\n");
+}
+
+// Show current song
+void showCurrentSong() {
+    if (currentSong == -1 || songCount == 0) {
+        printf("No song selected!\n");
+        return;
+    }
+
+    printf("Now Selected: %s by %s [%d sec]\n",
+           playlist[currentSong].title,
+           playlist[currentSong].artist,
+           playlist[currentSong].duration);
+}
+
+// Next song
+void nextSong() {
+    if (songCount == 0) {
+        printf("Playlist empty!\n");
+        return;
+    }
+
+    if (currentSong < songCount - 1) {
+        currentSong++;
+        playSong();
+    } else {
+        printf("You are at the last song!\n");
+    }
+}
+
+// Previous song
+void previousSong() {
+    if (songCount == 0) {
+        printf("Playlist empty!\n");
+        return;
+    }
+
+    if (currentSong > 0) {
+        currentSong--;
+        playSong();
+    } else {
+        printf("You are at the first song!\n");
+    }
+}
+
+int main() {
+    int choice = -1;
+    char choiceStr[16];
+
+    loadDefaultSongs();   // Load initial playlist
+
+    do {
+        printf("\n--- Music Playlist Manager ---\n");
+        printf("1. Add Song\n");
+        printf("2. Delete Song\n");
+        printf("3. Display Songs\n");
+        printf("4. Search Song\n");
+        printf("5. Show Current Song\n");
+        printf("6. Play Song\n");
+        printf("7. Pause Song\n");
+        printf("8. Next Song\n");
+        printf("9. Previous Song\n");
+        printf("10. Exit\n");
+
+        printf("Enter your choice: ");
+        if (!fgets(choiceStr, sizeof(choiceStr), stdin)) break;
+        if (sscanf(choiceStr, "%d", &choice) != 1) {
+            printf("Invalid input. Please enter a number.\n");
+            continue;
+        }
+
+        switch (choice) {
+            case 1: addSong(); break;
+            case 2: deleteSong(); break;
+            case 3: displaySongs(); break;
+            case 4: searchSong(); break;
+            case 5: showCurrentSong(); break;
+            case 6: playSong(); break;
+            case 7: pauseSong(); break;
+            case 8: nextSong(); break;
+            case 9: previousSong(); break;
+            case 10: printf("Exiting...\n"); break;
+            default: printf("Invalid choice!\n");
+        }
+
+    } while (choice != 10);
+
+    return 0;
+}
